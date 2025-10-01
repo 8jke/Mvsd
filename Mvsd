@@ -1,65 +1,77 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-local Window = OrionLib:MakeWindow({Name = "[SCS]MVSD",IntroEnabled = true,IntroText = "SCS", HidePremium = false, SaveConfig = true, ConfigFolder = "SCS"})
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+getgenv().SecureMode = true -- Optional: Use Secure Mode
 
-local MainTab = Window:MakeTab({
-    Name = "Main Tab",
-    Icon = "rbxassetid://17079723134"
+-- Create the main window
+local Window = Rayfield:CreateWindow({
+    Name = "Coldware",
+    LoadingTitle = "Coldware",
+    LoadingSubtitle = "made by inix",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "SCS",
+        FileName = "SCS_Config"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "", -- optional
+        RememberJoins = true
+    },
+    KeySystem = false -- optional, turn on if you want a key system
 })
 
-MainTab:AddButton({
-	Name = "Hitbox",
-	Callback = function()
-      	_G.HeadSize = 10
-_G.Disabled = true
+-- Main Tab
+local MainTab = Window:CreateTab("Main Tab", 17079723134) -- icon asset id
 
-game:GetService('RunService').RenderStepped:Connect(function()
-    if _G.Disabled then
-        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-            if player.Name ~= game:GetService('Players').LocalPlayer.Name then
-                pcall(function()
-                    local character = player.Character
-                    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
-                    if humanoidRootPart then
-                        humanoidRootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                        humanoidRootPart.Transparency = 0.7
-                        humanoidRootPart.BrickColor = BrickColor.new("Bright red") -- Changed color to red
-                        humanoidRootPart.Material = Enum.Material.Neon -- Changed material to Neon
-                        humanoidRootPart.CanCollide = false
+-- Hitbox Button
+MainTab:CreateButton({
+    Name = "Hitbox",
+    Callback = function()
+        _G.HeadSize = 6
+        _G.Disabled = true
+
+        game:GetService('RunService').RenderStepped:Connect(function()
+            if _G.Disabled then
+                for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+                    if player.Name ~= game:GetService('Players').LocalPlayer.Name then
+                        pcall(function()
+                            local character = player.Character
+                            local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+                            if humanoidRootPart then
+                                humanoidRootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                                humanoidRootPart.Transparency = 1
+                                humanoidRootPart.BrickColor = BrickColor.new("Bright red")
+                                humanoidRootPart.Material = Enum.Material.Neon
+                                humanoidRootPart.CanCollide = false
+                            end
+                        end)
                     end
-                end)
+                end
             end
-        end
+        end)
     end
-end)
-
-    	print("button pressed")
-  	end    
 })
 
-MainTab:AddButton({
-	Name = "ESP",
-	Callback = function()
-      		loadstring(game:HttpGet("https://pastebin.com/raw/zhR1sJAQ"))()
-  	end    
+-- ESP Button
+MainTab:CreateButton({
+    Name = "ESP",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/8jke/zvz/refs/heads/main/Esp"))()
+    end
 })
 
-local MainTab = Window:MakeTab({
-    Name = "Credits",
-    Icon = "rbxassetid://17079723134"
+-- Credits Tab
+local CreditsTab = Window:CreateTab("Credits", 17079723134)
+
+CreditsTab:CreateLabel("UI: Rayfield")
+CreditsTab:CreateLabel("Made By: Inix.")
+CreditsTab:CreateLabel("Made In October 1st, 2025")
+CreditsTab:CreateLabel("Have Fun!")
+
+-- Notification (Rayfield has built-in notif system)
+Rayfield:Notify({
+    Title = "Coldware",
+    Content = "THANKS FOR USING MY SCRIPT!",
+    Duration = 10,
+    Image = 4483362458
 })
-
-MainTab:AddLabel("UI:Orion")
-
-MainTab:AddLabel("Made By:awes0me & Ksawier")
-
-MainTab:AddLabel("Made In April 13, 2024")
-
-MainTab:AddLabel("Have Fun!")
-
-local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))();
-local Notify = AkaliNotif.Notify;
-Notify({
-Description = "THANKS FOR USING MY SCRIPT!";
-Title = "SCS";
-Duration = 10;
-});
