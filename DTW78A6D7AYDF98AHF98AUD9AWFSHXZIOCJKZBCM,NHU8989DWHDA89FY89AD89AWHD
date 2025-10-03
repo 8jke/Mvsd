@@ -1,77 +1,151 @@
--- Load Rayfield UI Library
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-getgenv().SecureMode = true -- Optional: Use Secure Mode
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
--- Create the main window
-local Window = Rayfield:CreateWindow({
-    Name = "Coldware",
-    LoadingTitle = "Coldware",
-    LoadingSubtitle = "made by inix",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "SCS",
-        FileName = "SCS_Config"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "", -- optional
-        RememberJoins = true
-    },
-    KeySystem = false -- optional, turn on if you want a key system
-})
+-- Settings
+local TOGGLE_KEY = Enum.KeyCode.LeftControl -- Press Left Control to toggle
+local HEAD_SIZE = 8 -- Hitbox size
+local enabled = true
 
--- Main Tab
-local MainTab = Window:CreateTab("Main Tab", 17079723134) -- icon asset id
+local trackedHRPs = {}
+local originalProps = {}
+local espObjects = {}
 
--- Hitbox Button
-MainTab:CreateButton({
-    Name = "Hitbox",
-    Callback = function()
-        _G.HeadSize = 6
-        _G.Disabled = true
+-- Save original HRP properties
+local function saveOriginal(hrp)
+    if hrp and not originalProps[hrp] then
+        originalProps[hrp] = {
+            Size = hrp.Size,
+            Transparency = hrp.Transparency,
+            BrickColor = hrp.BrickColor,
+            Material = hrp.Material,
+            CanCollide = hrp.CanCollide,
+        }
+    end
+end
 
-        game:GetService('RunService').RenderStepped:Connect(function()
-            if _G.Disabled then
-                for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-                    if player.Name ~= game:GetService('Players').LocalPlayer.Name then
-                        pcall(function()
-                            local character = player.Character
-                            local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
-                            if humanoidRootPart then
-                                humanoidRootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                                humanoidRootPart.Transparency = 1
-                                humanoidRootPart.BrickColor = BrickColor.new("Bright red")
-                                humanoidRootPart.Material = Enum.Material.Neon
-                                humanoidRootPart.CanCollide = false
-                            end
-                        end)
-                    end
-                end
+-- Restore original HRP properties
+local function restoreOriginal(hrp, player)
+    local props = originalProps[hrp]
+    if props then
+        hrp.Size = props.Size
+        hrp.Transparency = props.Transparency
+        hrp.BrickColor = props.BrickColor
+        hrp.Material = props.Material
+        hrp.CanCollide = props.CanCollide
+        originalProps[hrp] = nil
+    end
+
+    if espObjects[player] then
+        espObjects[player]:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+-- Apply hitbox expander + ESP
+local function applyTo(hrp, player)
+    if not hrp then return end
+    saveOriginal(hrp)
+
+    -- Expand HRP
+    hrp.Size = Vector3.new(HEAD_SIZE, HEAD_SIZE, HEAD_SIZE)
+    hrp.Transparency = 0.7
+    hrp.BrickColor = BrickColor.new("Bright red")
+    hrp.Material = Enum.Material.Neon
+    hrp.CanCollide = false
+
+    -- Add ESP highlight directly on HRP
+    if not espObjects[player] then
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = hrp
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.FillColor = Color3.fromRGB(0, 150, 255) -- Blue ESP
+        highlight.FillTransparency = 0.5
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.OutlineTransparency = 0
+        highlight.Parent = hrp
+        espObjects[player] = highlight
+    end
+end
+
+-- Handle characters
+local function handleCharacter(player, character)
+    if player == LocalPlayer then return end
+    if LocalPlayer.Team and player.Team == LocalPlayer.Team then return end -- Team check
+
+    local hrp = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+    if not hrp then return end
+
+    trackedHRPs[player] = hrp
+
+    if enabled then
+        applyTo(hrp, player)
+    else
+        restoreOriginal(hrp, player)
+    end
+
+    character.ChildAdded:Connect(function(child)
+        if child.Name == "HumanoidRootPart" then
+            local old = trackedHRPs[player]
+            if old and old ~= child then
+                restoreOriginal(old, player)
             end
-        end)
+            trackedHRPs[player] = child
+            if enabled then
+                applyTo(child, player)
+            end
+        end
+    end)
+
+    character.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            local old = trackedHRPs[player]
+            if old then
+                restoreOriginal(old, player)
+            end
+            trackedHRPs[player] = nil
+        end
+    end)
+end
+
+-- Handle player
+local function onPlayer(player)
+    if player == LocalPlayer then return end
+    if LocalPlayer.Team and player.Team == LocalPlayer.Team then return end -- Team check
+
+    if player.Character then
+        handleCharacter(player, player.Character)
     end
-})
 
--- ESP Button
-MainTab:CreateButton({
-    Name = "ESP",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/8jke/zvz/refs/heads/main/Esp"))()
+    player.CharacterAdded:Connect(function(char)
+        handleCharacter(player, char)
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    onPlayer(p)
+end
+
+Players.PlayerAdded:Connect(onPlayer)
+
+-- Toggle function
+local function setEnabled(state)
+    enabled = state
+    for player, hrp in pairs(trackedHRPs) do
+        if hrp and hrp.Parent then
+            if enabled then
+                applyTo(hrp, player)
+            else
+                restoreOriginal(hrp, player)
+            end
+        end
     end
-})
+end
 
--- Credits Tab
-local CreditsTab = Window:CreateTab("Credits", 17079723134)
-
-CreditsTab:CreateLabel("UI: Rayfield")
-CreditsTab:CreateLabel("Made By: Inix.")
-CreditsTab:CreateLabel("Made In October 1st, 2025")
-CreditsTab:CreateLabel("Have Fun!")
-
--- Notification (Rayfield has built-in notif system)
-Rayfield:Notify({
-    Title = "Coldware",
-    Content = "THANKS FOR USING MY SCRIPT!",
-    Duration = 10,
-    Image = 4483362458
-})
+-- Toggle with Left Control
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == TOGGLE_KEY then
+        setEnabled(not enabled)
+    end
+end)
